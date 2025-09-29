@@ -12,6 +12,12 @@ on:
   push:
     branches: [ main ]
 
+# 🔑 CRUCIAL: Agregar permisos explícitos para solucionar el error 403
+permissions:
+  contents: write
+  actions: read
+  metadata: read
+
 jobs:
   sync-lists:
     runs-on: ubuntu-latest
@@ -21,6 +27,8 @@ jobs:
       uses: actions/checkout@v4
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
+        # Importante para mantener credenciales para el push
+        persist-credentials: true
     
     - name: 📥 Download Latino Premium List
       run: |
@@ -108,15 +116,21 @@ jobs:
     - name: 📝 Update README with timestamp
       if: steps.changes.outputs.changed == 'true'
       run: |
-        # Actualizar README con timestamp
-        sed -i "s/{fecha y hora se actualiza automáticamente por GitHub Actions}/$(date '+%Y-%m-%d %H:%M:%S UTC')/" README.md
+        # Actualizar README con timestamp si existe
+        if [ -f "README.md" ]; then
+          sed -i "s/{fecha y hora se actualiza automáticamente por GitHub Actions}/$(date '+%Y-%m-%d %H:%M:%S UTC')/" README.md
+        fi
+    
+    - name: 🔧 Configure Git User
+      if: steps.changes.outputs.changed == 'true'
+      run: |
+        # Usar el bot oficial de GitHub Actions
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
     
     - name: 💾 Commit Changes
       if: steps.changes.outputs.changed == 'true'
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action Bot"
-        
         # Agregar archivos modificados
         git add latino-premium.m3u tv-premium.m3u STATS.md README.md
         
@@ -126,7 +140,7 @@ jobs:
         TOTAL_CHANNELS=$((LATINO_CHANNELS + TV_CHANNELS))
         
         git commit -m "🔄 Auto-sync: Actualizadas listas IPTV
-        
+
         📊 Resumen:
         - Latino Premium: $LATINO_CHANNELS canales  
         - TV Premium: $TV_CHANNELS canales
@@ -144,16 +158,18 @@ jobs:
         # Intentar push hasta 3 veces por si hay conflicto
         for i in 1 2 3; do
           if git push origin main; then
-            echo "✅ Push exitoso"
-            exit 0
+            echo "✅ Push exitoso en intento $i"
+            break
           else
             echo "⚠️ Intento $i/3 fallido - Haciendo pull y reintentando..."
-            git pull --rebase origin main
+            git pull --rebase origin main || echo "Pull falló, continuando..."
             sleep 5
+            if [ $i -eq 3 ]; then
+              echo "❌ Error: No se pudo hacer push después de 3 intentos"
+              exit 1
+            fi
           fi
         done
-        echo "❌ Error: No se pudo hacer push después de 3 intentos"
-        exit 1
     
     - name: 📨 Create Summary
       run: |
