@@ -12,6 +12,12 @@ on:
   push:
     branches: [ main ]
 
+# ⚠️ IMPORTANTE: Agregar permisos explícitos
+permissions:
+  contents: write
+  actions: read
+  metadata: read
+
 jobs:
   sync-lists:
     runs-on: ubuntu-latest
@@ -21,6 +27,8 @@ jobs:
       uses: actions/checkout@v4
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
+        # Configurar git para que pueda hacer push
+        persist-credentials: true
     
     - name: 📥 Download Latino Premium List
       run: |
@@ -108,15 +116,20 @@ jobs:
     - name: 📝 Update README with timestamp
       if: steps.changes.outputs.changed == 'true'
       run: |
-        # Actualizar README con timestamp
-        sed -i "s/{fecha y hora se actualiza automáticamente por GitHub Actions}/$(date '+%Y-%m-%d %H:%M:%S UTC')/" README.md
+        # Actualizar README con timestamp si existe
+        if [ -f "README.md" ]; then
+          sed -i "s/{fecha y hora se actualiza automáticamente por GitHub Actions}/$(date '+%Y-%m-%d %H:%M:%S UTC')/" README.md
+        fi
     
-    - name: 💾 Commit Changes
+    - name: 🔧 Configure Git
       if: steps.changes.outputs.changed == 'true'
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action Bot"
-        
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+    
+    - name: 💾 Commit and Push Changes
+      if: steps.changes.outputs.changed == 'true'
+      run: |        
         # Agregar archivos modificados
         git add latino-premium.m3u tv-premium.m3u STATS.md README.md
         
@@ -126,7 +139,7 @@ jobs:
         TOTAL_CHANNELS=$((LATINO_CHANNELS + TV_CHANNELS))
         
         git commit -m "🔄 Auto-sync: Actualizadas listas IPTV
-        
+
         📊 Resumen:
         - Latino Premium: $LATINO_CHANNELS canales  
         - TV Premium: $TV_CHANNELS canales
@@ -135,14 +148,10 @@ jobs:
         🕐 Fecha: $(date '+%Y-%m-%d %H:%M:%S UTC')
         🤖 Sincronización automática via GitHub Actions"
         
-        echo "✅ Cambios committed exitosamente"
-    
-    - name: 🚀 Push Changes
-      if: steps.changes.outputs.changed == 'true'
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: main
+        # Push usando git directamente
+        git push origin main
+        
+        echo "✅ Cambios pusheados exitosamente"
     
     - name: 📨 Create Summary
       run: |
