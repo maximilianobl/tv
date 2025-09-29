@@ -1,0 +1,185 @@
+name: 📺 Sync IPTV Lists
+
+on:
+  schedule:
+    # Ejecuta diariamente a las 02:00 UTC (puedes cambiar la hora)
+    - cron: '0 2 * * *'
+  
+  # Permite ejecutar manualmente el workflow
+  workflow_dispatch:
+  
+  # Ejecuta cuando se hace push al main branch
+  push:
+    branches: [ main ]
+
+jobs:
+  sync-lists:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🛒 Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: 📥 Download Latino Premium List
+      run: |
+        echo "📡 Descargando lista Latino Premium..."
+        curl -s -L "https://raw.githubusercontent.com/ARIEL0202/LATINO-PREMIUM/refs/heads/main/README.md" -o latino-premium-temp.m3u
+        
+        # Verificar si el archivo se descargó correctamente
+        if [ -f "latino-premium-temp.m3u" ] && [ -s "latino-premium-temp.m3u" ]; then
+          echo "✅ Lista Latino Premium descargada correctamente"
+          mv latino-premium-temp.m3u latino-premium.m3u
+        else
+          echo "❌ Error al descargar Latino Premium"
+          exit 1
+        fi
+    
+    - name: 📥 Download TV Premium List  
+      run: |
+        echo "📡 Descargando lista TV Premium..."
+        curl -s -L "https://raw.githubusercontent.com/ARIEL0202/TV-PREMIUM/refs/heads/main/README.md" -o tv-premium-temp.m3u
+        
+        # Verificar si el archivo se descargó correctamente
+        if [ -f "tv-premium-temp.m3u" ] && [ -s "tv-premium-temp.m3u" ]; then
+          echo "✅ Lista TV Premium descargada correctamente"
+          mv tv-premium-temp.m3u tv-premium.m3u
+        else
+          echo "❌ Error al descargar TV Premium"
+          exit 1
+        fi
+    
+    - name: 📊 Generate Statistics
+      run: |
+        echo "📈 Generando estadísticas..."
+        
+        # Contar canales en cada lista
+        LATINO_CHANNELS=$(grep -c "^#EXTINF:" latino-premium.m3u || echo "0")
+        TV_CHANNELS=$(grep -c "^#EXTINF:" tv-premium.m3u || echo "0")
+        TOTAL_CHANNELS=$((LATINO_CHANNELS + TV_CHANNELS))
+        
+        # Crear archivo de estadísticas
+        cat > STATS.md << EOF
+        # 📊 Estadísticas de las Listas IPTV
+        
+        | Lista | Canales | Última Actualización |
+        |-------|---------|---------------------|
+        | Latino Premium | $LATINO_CHANNELS | $(date '+%Y-%m-%d %H:%M:%S UTC') |
+        | TV Premium | $TV_CHANNELS | $(date '+%Y-%m-%d %H:%M:%S UTC') |
+        | **Total** | **$TOTAL_CHANNELS** | $(date '+%Y-%m-%d %H:%M:%S UTC') |
+        
+        ## 📈 Categorías más populares
+        
+        ### Latino Premium:
+        EOF
+        
+        # Contar categorías en Latino Premium
+        grep 'group-title=' latino-premium.m3u | sed 's/.*group-title="\([^"]*\)".*/\1/' | sort | uniq -c | sort -nr | head -10 >> STATS.md
+        
+        echo "" >> STATS.md
+        echo "### TV Premium:" >> STATS.md
+        
+        # Contar categorías en TV Premium  
+        grep 'group-title=' tv-premium.m3u | sed 's/.*group-title="\([^"]*\)".*/\1/' | sort | uniq -c | sort -nr | head -10 >> STATS.md
+        
+        echo "" >> STATS.md
+        echo "---" >> STATS.md
+        echo "*Última sincronización: $(date '+%Y-%m-%d %H:%M:%S UTC')*" >> STATS.md
+        
+        echo "📊 Estadísticas generadas - Total: $TOTAL_CHANNELS canales"
+    
+    - name: 🔍 Check for Changes
+      id: changes
+      run: |
+        # Verificar si hay cambios
+        if git diff --quiet HEAD -- latino-premium.m3u tv-premium.m3u STATS.md; then
+          echo "changed=false" >> $GITHUB_OUTPUT
+          echo "📌 No se detectaron cambios en las listas"
+        else
+          echo "changed=true" >> $GITHUB_OUTPUT
+          echo "🔄 Se detectaron cambios en las listas"
+          
+          # Mostrar un resumen de los cambios
+          echo "📋 Resumen de cambios:"
+          git diff --stat HEAD -- latino-premium.m3u tv-premium.m3u STATS.md || true
+        fi
+    
+    - name: 📝 Update README with timestamp
+      if: steps.changes.outputs.changed == 'true'
+      run: |
+        # Actualizar README con timestamp
+        sed -i "s/{fecha y hora se actualiza automáticamente por GitHub Actions}/$(date '+%Y-%m-%d %H:%M:%S UTC')/" README.md
+    
+    - name: 💾 Commit Changes
+      if: steps.changes.outputs.changed == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action Bot"
+        
+        # Agregar archivos modificados
+        git add latino-premium.m3u tv-premium.m3u STATS.md README.md
+        
+        # Crear commit con información detallada
+        LATINO_CHANNELS=$(grep -c "^#EXTINF:" latino-premium.m3u || echo "0")
+        TV_CHANNELS=$(grep -c "^#EXTINF:" tv-premium.m3u || echo "0")
+        TOTAL_CHANNELS=$((LATINO_CHANNELS + TV_CHANNELS))
+        
+        git commit -m "🔄 Auto-sync: Actualizadas listas IPTV
+        
+        📊 Resumen:
+        - Latino Premium: $LATINO_CHANNELS canales  
+        - TV Premium: $TV_CHANNELS canales
+        - Total: $TOTAL_CHANNELS canales
+        
+        🕐 Fecha: $(date '+%Y-%m-%d %H:%M:%S UTC')
+        🤖 Sincronización automática via GitHub Actions"
+        
+        echo "✅ Cambios committed exitosamente"
+    
+    - name: 🚀 Push Changes
+      if: steps.changes.outputs.changed == 'true'
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: main
+    
+    - name: 📨 Create Summary
+      run: |
+        echo "## 📺 Resumen de Sincronización IPTV" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        LATINO_CHANNELS=$(grep -c "^#EXTINF:" latino-premium.m3u || echo "0")
+        TV_CHANNELS=$(grep -c "^#EXTINF:" tv-premium.m3u || echo "0") 
+        TOTAL_CHANNELS=$((LATINO_CHANNELS + TV_CHANNELS))
+        
+        echo "| 📊 Estadística | Valor |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| 🇱🇦 Latino Premium | $LATINO_CHANNELS canales |" >> $GITHUB_STEP_SUMMARY
+        echo "| 📺 TV Premium | $TV_CHANNELS canales |" >> $GITHUB_STEP_SUMMARY  
+        echo "| 🎯 **Total** | **$TOTAL_CHANNELS canales** |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🕐 Última sync | $(date '+%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.changes.outputs.changed }}" == "true" ]; then
+          echo "✅ **Estado**: Listas actualizadas exitosamente" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "📌 **Estado**: No se requirieron actualizaciones" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔗 Enlaces directos:" >> $GITHUB_STEP_SUMMARY
+        echo "- [Latino Premium M3U](https://raw.githubusercontent.com/${{ github.repository }}/main/latino-premium.m3u)" >> $GITHUB_STEP_SUMMARY
+        echo "- [TV Premium M3U](https://raw.githubusercontent.com/${{ github.repository }}/main/tv-premium.m3u)" >> $GITHUB_STEP_SUMMARY
+    
+    - name: 🎉 Success Notification
+      if: success()
+      run: |
+        echo "🎉 ¡Sincronización completada exitosamente!"
+        echo "📺 Las listas IPTV están actualizadas y listas para usar"
+        
+    - name: 🚨 Failure Notification  
+      if: failure()
+      run: |
+        echo "🚨 Error durante la sincronización"
+        echo "❌ Revisa los logs para más detalles"
