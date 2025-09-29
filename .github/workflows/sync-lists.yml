@@ -139,10 +139,21 @@ jobs:
     
     - name: 🚀 Push Changes
       if: steps.changes.outputs.changed == 'true'
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: main
+      run: |
+        echo "🚀 Haciendo push de los cambios..."
+        # Intentar push hasta 3 veces por si hay conflicto
+        for i in 1 2 3; do
+          if git push origin main; then
+            echo "✅ Push exitoso"
+            exit 0
+          else
+            echo "⚠️ Intento $i/3 fallido - Haciendo pull y reintentando..."
+            git pull --rebase origin main
+            sleep 5
+          fi
+        done
+        echo "❌ Error: No se pudo hacer push después de 3 intentos"
+        exit 1
     
     - name: 📨 Create Summary
       run: |
