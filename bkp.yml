@@ -1,0 +1,45 @@
+name: 📺 Sync IPTV Lists
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  sync-lists:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        persist-credentials: true
+    
+    - name: Download Lists
+      run: |
+        curl -L "https://raw.githubusercontent.com/ARIEL0202/LATINO-PREMIUM/refs/heads/main/README.md" -o latino-premium.m3u
+        curl -L "https://raw.githubusercontent.com/ARIEL0202/TV-PREMIUM/refs/heads/main/README.md" -o tv-premium.m3u
+    
+    - name: Check Changes
+      id: changes
+      run: |
+        if git diff --quiet HEAD -- *.m3u; then
+          echo "changed=false" >> $GITHUB_OUTPUT
+        else
+          echo "changed=true" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Commit and Push
+      if: steps.changes.outputs.changed == 'true'
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add *.m3u
+        git commit -m "🔄 Auto-sync: Updated IPTV lists $(date)"
+        git push
