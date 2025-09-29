@@ -94,4 +94,4 @@ Para reportar problemas o solicitar ayuda:
 
 ---
 
-> **Última actualización automática**: `{fecha y hora se actualiza automáticamente por GitHub Actions}`
+> **Última actualización automática: 2025-09-29 14:13:38 UTC
