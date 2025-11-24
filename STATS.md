@@ -2,9 +2,9 @@
 
 | Lista | Canales | Última Actualización |
 |-------|---------|---------------------|
-| Latino Premium | 764 | 2025-11-23 03:27:41 UTC |
-| TV Premium | 208 | 2025-11-23 03:27:41 UTC |
-| **Total** | **972** | 2025-11-23 03:27:41 UTC |
+| Latino Premium | 764 | 2025-11-24 03:24:15 UTC |
+| TV Premium | 208 | 2025-11-24 03:24:15 UTC |
+| **Total** | **972** | 2025-11-24 03:24:15 UTC |
 
 ## 📈 Categorías más populares
 
@@ -37,7 +37,7 @@
 ```
 
 ---
-*Última sincronización: 2025-11-23 03:27:41 UTC*
+*Última sincronización: 2025-11-24 03:24:16 UTC*
 
 ## 🔗 Enlaces directos:
 - [Latino Premium M3U](https://raw.githubusercontent.com/maximilianobl/tv/main/latino-premium.m3u)
