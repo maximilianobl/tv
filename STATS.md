@@ -2,9 +2,9 @@
 
 | Lista | Canales | Última Actualización |
 |-------|---------|---------------------|
-| Latino Premium | 764 | 2025-12-22 03:42:52 UTC |
-| TV Premium | 262 | 2025-12-22 03:42:52 UTC |
-| **Total** | **1026** | 2025-12-22 03:42:52 UTC |
+| Latino Premium | 764 | 2025-12-23 03:26:39 UTC |
+| TV Premium | 266 | 2025-12-23 03:26:39 UTC |
+| **Total** | **1030** | 2025-12-23 03:26:39 UTC |
 
 ## 📈 Categorías más populares
 
@@ -24,10 +24,10 @@
 
 ### TV Premium:
 ```
-     46 VARIOS
+     49 VARIOS
      35 CINE
      34 CINE-SERIES PLUTO
-     27 MUSIC
+     28 MUSIC
      21 24/7
      20 ⚽ DEPORTES
      14 ITALY 
@@ -37,7 +37,7 @@
 ```
 
 ---
-*Última sincronización: 2025-12-22 03:42:52 UTC*
+*Última sincronización: 2025-12-23 03:26:39 UTC*
 
 ## 🔗 Enlaces directos:
 - [Latino Premium M3U](https://raw.githubusercontent.com/maximilianobl/tv/main/latino-premium.m3u)
